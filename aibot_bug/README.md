@@ -35,8 +35,8 @@ pip install aibot-bug
 #### Via GitHub (Development)
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/AIbot-bug.git
-cd AIbot-bug
+git clone https://github.com/Lifejiggy/AIbot-bug.git
+cd AIbot-bug && aibot_bug
 pip install -e .
 ```
 
@@ -58,7 +58,9 @@ aibot-bug
 
 Or run the local script:
 ```bash
-python aibot_bug/main.py
+python aibot_bug/main.py 
+or
+python main.py
 ```
 
 

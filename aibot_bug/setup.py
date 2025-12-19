@@ -5,7 +5,7 @@ setup(
     version="4.0.0",
     author="ArkhAngelLifeJiggy",
     description="Ultimate AI-powered bug bounty beast for automated recon and vulnerability discovery.",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/Lifejiggy/AIbot-bug",
     packages=find_packages(),

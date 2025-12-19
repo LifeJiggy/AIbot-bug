@@ -1,30 +1,27 @@
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Distribution / Packaged
 dist/
 build/
 *.egg-info/
+
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# Tool Outputs & Logs
 automation.log
 *.txt
 *.json
 *.csv
 *.xml
 *.html
-!README.md
-!requirements.txt
-!setup.py
-!.gitignore
-!PUBLISHING.md
-!PROJECT_REVIEW.md
-!aibot_bug/
-AIbot2/
-!Gemini.py
-!Newpro.py
-!Old.py
-!WebCrawler.py
-!__pycache__/
-!ai_manager.py
-!automation.log
-!automation_hub.py
-!paramspider/
-!requirements.txt
+
+# OS specific files
+.DS_Store
+Thumbs.db

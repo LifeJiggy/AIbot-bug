@@ -147,10 +147,12 @@ class AdvancedFeatures:
 
     @staticmethod
     async def usage_pattern_analysis():
-        """Mock analysis of tool usage."""
-        # In real case, we'd track 'results' frequency
-        summary = f"Currently tracked results: { {k: len(v) for k,v in results.items()} }"
-        analysis = await ai_manager.analyze(summary, context="Usage Pattern Analysis")
+        """Analyze tool usage and result density to optimize future scans."""
+        summary = {k: len(v) for k, v in results.items() if isinstance(v, list)}
+        total_findings = sum(summary.values())
+        
+        prompt = f"Analyze these scan results density: {json.dumps(summary)}. Total findings: {total_findings}. Suggest where to focus more efforts (e.g., deeper fuzzing, more subdomain tools) and where to scale back."
+        analysis = await ai_manager.analyze(prompt, context="Usage Pattern Analysis")
         print(Fore.GREEN + "\n[AI Usage Pattern Analysis]:" + Style.RESET_ALL)
         print(analysis)
 
@@ -420,7 +422,17 @@ async def directory_busting(url):
     # Ensure wordlist exists
     wordlist_path = "wordlist.txt"
     if not os.path.exists(wordlist_path):
-        with open(wordlist_path, "w") as f: f.write("admin\napi\nconfig\n") # Minimal fallback
+        print(Fore.YELLOW + " [!] wordlist.txt not found. Creating a smart minimal list..." + Style.RESET_ALL)
+        # Attempt to get a smart list from AI if possible
+        try:
+            domain = urlparse(url).netloc or url
+            smart_list = await automation.smart_wordlist(domain, "directories")
+            # Extract words from AI response (very simple heuristic)
+            words = re.findall(r'\b\w+\b', smart_list)
+            if not words: words = ["admin", "api", "config", "debug", "v1", "v2", ".git", ".env"]
+            with open(wordlist_path, "w") as f: f.write("\n".join(words[:50]))
+        except:
+            with open(wordlist_path, "w") as f: f.write("admin\napi\nconfig\ndebug\n.git\n.env\n")
 
     async def run_dir_tool(tool, idx):
         print(Fore.YELLOW + f"  [{idx}/{total_tools}] Launching {tool}..." + Style.RESET_ALL)

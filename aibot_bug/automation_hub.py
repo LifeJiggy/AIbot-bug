@@ -34,7 +34,11 @@ class AutomationHub:
 
     @staticmethod
     async def predict_scaling():
-        prompt = "Based on current bug bounty scan activity, predict when we should scale resources."
+        """Predict resource needs based on scan depth and current finding volume."""
+        summary = {k: len(v) for k, v in results.items() if isinstance(v, list)}
+        current_load = sum(summary.values())
+        
+        prompt = f"Given current scan findings density {json.dumps(summary)} and a 'load factor' of {current_load}, predict the optimal resource scaling (threads/RAM/CPU) for the next phase. Return technical recommendations only."
         return await ai_manager.analyze(prompt, context="Resource Scaling Predictor")
 
     @staticmethod

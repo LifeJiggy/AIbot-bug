@@ -1,9 +1,13 @@
 import os
 import json
 import asyncio
-from ai_manager import AIManager
+from .ai_manager import AIManager
+from .report_generator import ReportGenerator
+from .cloud_manager import CloudManager
 
 ai_manager = AIManager()
+cloud_mgr = CloudManager()
+report_gen = ReportGenerator()
 
 class AutomationHub:
     @staticmethod
@@ -74,10 +78,12 @@ class AutomationHub:
         return await ai_manager.analyze(prompt, context="AI Threat Modeler")
 
     @staticmethod
-    def smart_report_mock(results: dict):
-        report_data = f"<h1>Bug Bounty Report</h1><p>Findings: {len(results)}</p>"
-        with open("smart_report_mock.html", "w") as f: f.write(report_data)
-        return "Smart HTML Report (Mock) generated."
+    def generate_professional_report(results: dict, target: str):
+        """Generates a real HTML report and attempts cloud sync."""
+        filename = report_gen.generate_html(results, target)
+        print(f"[+] Professional HTML Report generated: {filename}")
+        # Run sync in background or await if needed (hub is usually async)
+        return filename
 
     # --- 5 NEW ADVANCED FEATURES ---
     @staticmethod

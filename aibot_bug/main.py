@@ -13,8 +13,9 @@ import colorama
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
-from ai_manager import AIManager
-from automation_hub import AutomationHub
+from .ai_manager import AIManager
+from .automation_hub import AutomationHub
+from .cloud_manager import CloudManager
 
 
 # Initialize colorama
@@ -23,6 +24,7 @@ colorama.init()
 # Initialize Managers
 ai_manager = AIManager()
 automation = AutomationHub()
+cloud_mgr = CloudManager()
 
 # Setup Logging (Strictly Separated)
 class InfoFilter(logging.Filter):
@@ -153,12 +155,15 @@ class AdvancedFeatures:
         print(analysis)
 
     @staticmethod
-    def cloud_native_mock():
-        """Mock Cloud Integration."""
-        print(Fore.CYAN + "Cloud-native integration (MOCK):" + Style.RESET_ALL)
-        print("- AWS S3: Syncing report... [OK]")
-        print("- GCP Storage: Uploading logs... [OK]")
-        print("- Azure Blob: Initialized... [OK]")
+    async def sync_to_cloud(file_path=None):
+        """Sync files/logs to real cloud storage."""
+        if file_path:
+            res = await cloud_mgr.sync_file(file_path)
+            print(Fore.GREEN + f"[Cloud] {res}" + Style.RESET_ALL)
+        else:
+            print(Fore.CYAN + "[Monitor] Syncing automation.log to S3..." + Style.RESET_ALL)
+            res = await cloud_mgr.sync_logs()
+            print(Fore.GREEN + f"[Cloud] {res}" + Style.RESET_ALL)
 
 
 class ValidationManager:
@@ -475,14 +480,34 @@ async def batch_processing(file_path):
         print(Fore.YELLOW + f"\n>>> Target: {t} <<<" + Style.RESET_ALL)
         await subdomain_enumeration(t) # Example flow
 
-async def webhook_alert(message):
-    """Send notification to Discord/Slack (Mock)."""
+async def webhook_alert(message, target=None):
+    """Send real notification to Discord/Slack webhooks."""
     webhook_url = os.environ.get("WEBHOOK_URL")
-    if not webhook_url: return
+    if not webhook_url:
+        print(Fore.YELLOW + "[!] Webhook URL not set in environment." + Style.RESET_ALL)
+        return
+    
+    # Identify if it's Discord or Slack
+    is_discord = "discord.com" in webhook_url
+    
+    payload = {}
+    if is_discord:
+        payload = {
+            "embeds": [{
+                "title": "AIbot-bug Alert",
+                "description": message,
+                "color": 15158332, # Red
+                "footer": {"text": f"Target: {target}" if target else "General Alert"}
+            }]
+        }
+    else: # Default/Slack
+        payload = {"text": f"*AIbot-bug Alert*\n{message}"}
+
     try:
-        requests.post(webhook_url, json={"content": message})
-        print(Fore.GREEN + "[Monitor] Webhook alert sent." + Style.RESET_ALL)
-    except: pass
+        requests.post(webhook_url, json=payload, timeout=5)
+        print(Fore.GREEN + "[Monitor] Webhook alert sent successfully." + Style.RESET_ALL)
+    except Exception as e:
+        print(Fore.RED + f"[!] Failed to send webhook: {e}" + Style.RESET_ALL)
 
 async def parameter_discovery(url):
     """Discover parameters with Arjun and Python."""
@@ -674,12 +699,13 @@ async def cloud_recon(target):
     available_tools = ["s3scanner", "cloud_enum", "trivy"]
     selected_tools = await select_tools("cloud recon", available_tools)
     
+    s_target = safe_filename(target)
     for tool in selected_tools:
         if tool == "s3scanner":
-            output = await run_tool("s3scanner", ["scan", "--bucket", domain.split('.')[0]])
+            output = await run_tool("s3scanner", ["scan", "--bucket", domain.split('.')[0]], f"s3_{s_target}.txt")
             results["cloud_buckets"].extend(output)
         elif tool == "cloud_enum":
-            output = await run_tool("python", ["cloud_enum.py", "-k", domain])
+            output = await run_tool("python", ["cloud_enum.py", "-k", domain], f"cloud_enum_{s_target}.txt")
             results["cloud_buckets"].extend(output)
     print(Fore.GREEN + "[+] Cloud Recon finished." + Style.RESET_ALL)
 
@@ -690,12 +716,13 @@ async def port_scanning(target):
     available_tools = ["naabu", "rustscan"]
     selected_tools = await select_tools("port scanning", available_tools)
     
+    s_target = safe_filename(target)
     for tool in selected_tools:
         if tool == "naabu":
-            output = await run_tool("naabu", ["-host", domain, "-p", "1-65535", "-silent"])
+            output = await run_tool("naabu", ["-host", domain, "-p", "1-65535", "-silent"], f"naabu_{s_target}.txt")
             results["ports"].extend(output)
         elif tool == "rustscan":
-            output = await run_tool("rustscan", ["-a", domain, "--", "-sV"])
+            output = await run_tool("rustscan", ["-a", domain, "--", "-sV"], f"rustscan_{s_target}.txt")
             results["ports"].extend(output)
     print(Fore.GREEN + "[+] Port Scanning finished." + Style.RESET_ALL)
 
@@ -950,7 +977,7 @@ async def advanced_lab():
         print("3. Performance Benchmarking")
         print("4. Dynamic Parameter Tuning")
         print("5. Usage Pattern Analysis")
-        print("6. Cloud-native Sync (Mock)")
+        print("6. Cloud-native Sync (S3)")
         print("7. Results Summary (High-level)")
         print("8. Back to Main Menu")
         choice = input(Fore.YELLOW + "Select an option: " + Style.RESET_ALL)
@@ -967,7 +994,7 @@ async def advanced_lab():
             tool = input("Tool name for tuning: ")
             await AdvancedFeatures.dynamic_tuning(tool)
         elif choice == "5": await AdvancedFeatures.usage_pattern_analysis()
-        elif choice == "6": AdvancedFeatures.cloud_native_mock()
+        elif choice == "6": await AdvancedFeatures.sync_to_cloud()
         elif choice == "7":
             summary = await ai_manager.analyze(str(results), context="High-level Results Summary")
             print(Fore.GREEN + "\n[High-level Summary]:" + Style.RESET_ALL)
@@ -994,7 +1021,7 @@ async def automation_menu():
         print("11. Exploit Explainability (In-depth)")
         print("12. Remediation & Patch Advisor")
         print("13. Automated Threat Modeling")
-        print("14. Build Smart HTML Report (Mock)")
+        print("14. Generate Professional HTML Report")
         print(Fore.YELLOW + "--- THE 'LOVE THIS' COLLECTION (5 NEW) ---" + Style.RESET_ALL)
         print("15. AI Vulnerability Chain Discovery")
         print("16. Contextual WAF/Filter Bypass Gen")
@@ -1044,7 +1071,8 @@ async def automation_menu():
             trgt = input("Enter target for threat modeling: ")
             print(await automation.threat_model(trgt))
         elif choice == "14":
-            print(automation.smart_report_mock(results))
+            target = input("Enter target name for report: ")
+            print(automation.generate_professional_report(results, target))
         elif choice == "15":
             print(await automation.vuln_chain_discovery(results))
         elif choice == "16":
@@ -1121,6 +1149,18 @@ async def robotic_lab():
             results["validated_findings"].append(f"[{f_type}] {target}: {finding}")
         else:
             print(Fore.YELLOW + f"[!] Robotic Analysis detected Potential False Positive: {finding[:100]}" + Style.RESET_ALL)
+
+async def generate_report():
+    """Generates a professional Beast Mode report."""
+    target = input(Fore.YELLOW + "Enter target name for report: " + Style.RESET_ALL)
+    if not target: return
+    print(Fore.CYAN + "[Monitor] Assembling findings into professional report..." + Style.RESET_ALL)
+    filename = automation.generate_professional_report(results, target)
+    print(Fore.GREEN + f"[✓] Report ready: {filename}" + Style.RESET_ALL)
+    
+    sync = input(Fore.YELLOW + "Sync report to cloud? (y/n): " + Style.RESET_ALL).lower()
+    if sync == 'y':
+        await AdvancedFeatures.sync_to_cloud(filename)
 
 async def display_menu():
 
@@ -1238,7 +1278,7 @@ async def main():
         elif choice == "21":
             print(await automation.vuln_chain_discovery(results))
         elif choice == "22":
-            await webhook_alert(f"Manual alert triggered for {target}")
+            await webhook_alert(f"Manual alert triggered for {target}", target=target)
         elif choice == "23":
             print(await automation.predict_scaling())
         elif choice == "25": await cluster_issues()

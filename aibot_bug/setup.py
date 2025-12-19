@@ -19,6 +19,8 @@ setup(
         "urllib3",
         "aiohttp",
         "python-dotenv",
+        "boto3",
+        "Jinja2",
     ],
     entry_points={
         "console_scripts": [
